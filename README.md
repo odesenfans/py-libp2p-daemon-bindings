@@ -6,12 +6,16 @@
 
 Have aligned with the go-client now!
 
-Methods
+## Supported methods
+
+The following methods are supported by the library and are tested against jsp2pd 0.10.1.
+
 - [x] `Identify`
 - [x] `Connect`
 - [x] `StreamOpen`
 - [x] `StreamHandler` - Register
 - [x] `StreamHandler` - Inbound stream
-- [x] DHT ops
-- [x] Conn manager ops
+- [x] DHT ops - base functionalities
+- [ ] Conn manager ops: unimplemented in jsp2pd
 - [x] PubSub ops
+- [ ] Peer Store
