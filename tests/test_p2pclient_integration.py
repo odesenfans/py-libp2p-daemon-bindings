@@ -327,6 +327,62 @@ async def test_client_stream_handler_failure(p2pcs):
         await p2pcs[0].stream_open(peer_id_1, (proto,))
 
 
+@pytest.mark.parametrize("enable_control", (True,))
+@pytest.mark.parametrize("reuse_stream", (False, True))
+@pytest.mark.anyio
+async def test_client_stream_send_and_receive(p2pcs, reuse_stream: bool):
+    """
+    Checks that it is possible to send and receive messages using a stream protocol.
+    The sender sends a message to an echo server that replies on the same stream.
+    We try to send two messages. Depending on the configuration, either the same stream
+    is used to send the messages, either we open a new stream for each message.
+    """
+
+    peer_id_1, _ = await p2pcs[1].identify()
+    await connect_safe(p2pcs[0], p2pcs[1])
+
+    proto = "/p2pclient/test/echo"
+
+    # test case: registered a wrong protocol name
+    async def handle_proto_echo(stream_info, stream):
+        data = await stream.receive_some(1000)
+        await stream.send_all(data)
+
+    await p2pcs[0].stream_handler(proto, handle_proto_echo)
+    await p2pcs[1].stream_handler(proto, handle_proto_echo)
+
+    msg1 = b"Wake me up"
+    msg2 = b"Wake me up inside"
+
+    if reuse_stream:
+        stream_info, stream = await p2pcs[0].stream_open(peer_id_1, [proto])
+        try:
+            await stream.send_all(msg1)
+            response1 = await stream.receive_some(1000)
+            await stream.send_all(msg2)
+            response2 = await stream.receive_some(1000)
+        finally:
+            await stream.close()
+
+    else:
+        stream_info, stream = await p2pcs[0].stream_open(peer_id_1, [proto])
+        try:
+            await stream.send_all(msg1)
+            response1 = await stream.receive_some(1000)
+        finally:
+            await stream.close()
+
+        stream_info, stream = await p2pcs[0].stream_open(peer_id_1, [proto])
+        try:
+            await stream.send_all(msg2)
+            response2 = await stream.receive_some(1000)
+        finally:
+            await stream.close()
+
+    assert response1 == msg1
+    assert response2 == msg2
+
+
 # Fails randomly with response = type: ERROR # error {msg: "Not found"}
 @pytest.mark.jsp2pd_probable_bug
 @pytest.mark.parametrize("enable_control, enable_dht", ((True, True),))
